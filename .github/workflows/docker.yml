@@ -2,7 +2,7 @@ name: 'Push Docker Images'
 
 on:
   push:
-    branches: [ trunk ]
+    branches: [ v3 ]
     paths:
       - 'src/**'
       - 'server/**'
@@ -50,9 +50,9 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            ghcr.io/diced/zipline:trunk
-            ghcr.io/diced/zipline:trunk-${{ steps.version.outputs.zipline_version }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/zipline:trunk
-            ${{ secrets.DOCKERHUB_USERNAME }}/zipline:trunk-${{ steps.version.outputs.zipline_version }}
+            ghcr.io/diced/zipline:v3-trunk
+            ghcr.io/diced/zipline:v3-trunk-${{ steps.version.outputs.zipline_version }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/zipline:v3-trunk
+            ${{ secrets.DOCKERHUB_USERNAME }}/zipline:v3-trunk-${{ steps.version.outputs.zipline_version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
