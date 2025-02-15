@@ -51,7 +51,7 @@ const validator = s.object({
   }),
   datasource: s
     .object({
-      type: s.enum('local', 's3', 'supabase').default('local'),
+      type: s.enum('local', 's3').default('local'),
       local: s
         .object({
           directory: s.string.default(resolve('./uploads')).transform((v) => resolve(v)),
@@ -68,11 +68,6 @@ const validator = s.object({
         force_s3_path: s.boolean.default(false),
         region: s.string.default('us-east-1'),
         use_ssl: s.boolean.default(false),
-      }).optional,
-      supabase: s.object({
-        url: s.string,
-        key: s.string,
-        bucket: s.string,
       }).optional,
     })
     .default({
@@ -253,43 +248,29 @@ export default function validate(config): Config {
     logger.debug(`Attemping to validate ${JSON.stringify(config)}`);
     const validated = validator.parse(config);
     logger.debug(`Recieved config: ${JSON.stringify(validated)}`);
-    switch (validated.datasource.type) {
-      case 's3': {
-        const errors = [];
-        if (!validated.datasource.s3.access_key_id)
-          errors.push('datasource.s3.access_key_id is a required field');
-        if (!validated.datasource.s3.secret_access_key)
-          errors.push('datasource.s3.secret_access_key is a required field');
-        if (!validated.datasource.s3.bucket) errors.push('datasource.s3.bucket is a required field');
-        if (!validated.datasource.s3.endpoint) errors.push('datasource.s3.endpoint is a required field');
-        if (errors.length) throw { errors };
-        break;
-      }
-      case 'supabase': {
-        const errors = [];
 
-        if (!validated.datasource.supabase.key) errors.push('datasource.supabase.key is a required field');
-        if (!validated.datasource.supabase.url) errors.push('datasource.supabase.url is a required field');
-        if (!validated.datasource.supabase.bucket)
-          errors.push('datasource.supabase.bucket is a required field');
-        if (errors.length) throw { errors };
-
-        break;
-      }
+    if (validated.datasource.type === 's3') {
+      const errors = [];
+      if (!validated.datasource.s3.access_key_id)
+        errors.push('datasource.s3.access_key_id is a required field');
+      if (!validated.datasource.s3.secret_access_key)
+        errors.push('datasource.s3.secret_access_key is a required field');
+      if (!validated.datasource.s3.bucket) errors.push('datasource.s3.bucket is a required field');
+      if (!validated.datasource.s3.endpoint) errors.push('datasource.s3.endpoint is a required field');
+      if (errors.length) throw { errors };
     }
 
-    const reserved = ['/view', '/dashboard', '/code', '/folder', '/api', '/auth'];
-    if (reserved.some((r) => validated.uploader.route.startsWith(r))) {
+    const reserved = new RegExp(/^\/(view|code|folder|auth|r)(\/\S*)?$|^\/(api|dashboard)(\/\S*)*/);
+    if (reserved.exec(validated.uploader.route))
       throw {
         errors: [`The uploader route cannot be ${validated.uploader.route}, this is a reserved route.`],
         show: true,
       };
-    } else if (reserved.some((r) => validated.urls.route.startsWith(r))) {
+    if (reserved.exec(validated.urls.route))
       throw {
         errors: [`The urls route cannot be ${validated.urls.route}, this is a reserved route.`],
         show: true,
       };
-    }
 
     return validated as unknown as Config;
   } catch (e) {

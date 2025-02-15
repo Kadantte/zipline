@@ -1,7 +1,7 @@
 import { Datasource } from '.';
-import { Readable } from 'stream';
+import { PassThrough, Readable } from 'stream';
 import { ConfigS3Datasource } from 'lib/config/Config';
-import { Client } from 'minio';
+import { BucketItemStat, Client } from 'minio';
 
 export class S3 extends Datasource {
   public name = 'S3';
@@ -24,13 +24,14 @@ export class S3 extends Datasource {
     await this.s3.putObject(
       this.config.bucket,
       file,
-      data,
+      new PassThrough().end(data),
+      data.byteLength,
       options ? { 'Content-Type': options.type } : undefined,
     );
   }
 
   public async delete(file: string): Promise<void> {
-    await this.s3.removeObject(this.config.bucket, file);
+    await this.s3.removeObject(this.config.bucket, file, { forceDelete: true });
   }
 
   public async clear(): Promise<void> {
@@ -54,10 +55,18 @@ export class S3 extends Datasource {
     });
   }
 
-  public async size(file: string): Promise<number> {
-    const stat = await this.s3.statObject(this.config.bucket, file);
-
-    return stat.size;
+  public size(file: string): Promise<number | null> {
+    return new Promise((res) => {
+      this.s3.statObject(
+        this.config.bucket,
+        file,
+        // @ts-expect-error this callback is not in the types but the code for it is there
+        (err: unknown, stat: BucketItemStat) => {
+          if (err) res(null);
+          else res(stat.size);
+        },
+      );
+    });
   }
 
   public async fullSize(): Promise<number> {
@@ -69,6 +78,17 @@ export class S3 extends Datasource {
       objects.on('end', (err) => {
         if (err) res(0);
         else res(size);
+      });
+    });
+  }
+
+  public async range(file: string, start: number, end: number): Promise<Readable> {
+    return new Promise((res) => {
+      this.s3.getPartialObject(this.config.bucket, file, start, end, (err, stream) => {
+        if (err) {
+          console.log(err);
+          res(null);
+        } else res(stream);
       });
     });
   }

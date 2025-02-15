@@ -14,8 +14,7 @@ async function handler(req: NextApiReq, res: NextApiRes) {
     code?: string;
   };
 
-  const users = await prisma.user.count();
-  if (users === 0) {
+  if ((await prisma.user.count()) === 0) {
     logger.debug('no users found... creating default user...');
     await prisma.user.create({
       data: {
@@ -42,7 +41,9 @@ async function handler(req: NextApiReq, res: NextApiRes) {
   else if (await checkPassword(password, user.password)) valid = true;
   else valid = false;
 
-  logger.debug(`body(${JSON.stringify(req.body)}): checkPassword(${password}, argon2-str) => ${valid}`);
+  logger.debug(
+    `body(${JSON.stringify(Object.keys(req.body))}): checkPassword(password, argon2-str) => ${valid}`,
+  );
 
   if (!valid) return res.unauthorized('Wrong password');
 
@@ -51,7 +52,7 @@ async function handler(req: NextApiReq, res: NextApiRes) {
 
     const success = verify_totp_code(user.totpSecret, code);
     logger.debug(
-      `body(${JSON.stringify(req.body)}): verify_totp_code(${user.totpSecret}, ${code}) => ${success}`,
+      `body(${JSON.stringify(Object.keys(req.body))}): verify_totp_code(totpSecret, ${code}) => ${success}`,
     );
     if (!success) return res.badRequest('Invalid code', { totp: true });
   }

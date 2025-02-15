@@ -1,4 +1,4 @@
-import { File } from '@prisma/client';
+import type { File } from '@prisma/client';
 import { ExifTool, Tags } from 'exiftool-vendored';
 import { createWriteStream } from 'fs';
 import { readFile, rm } from 'fs/promises';

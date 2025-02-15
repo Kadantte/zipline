@@ -22,6 +22,7 @@ import { useEffect, useState } from 'react';
 import { useRecoilValue } from 'recoil';
 import RecentFiles from './RecentFiles';
 import { StatCards } from './StatCards';
+import Version4Notice from './Version4Notice';
 
 export default function Dashboard({ disableMediaPreview, exifEnabled, compress }) {
   const user = useRecoilValue(userSelector);
@@ -114,6 +115,8 @@ export default function Dashboard({ disableMediaPreview, exifEnabled, compress }
     window.open(`${window.location.protocol}//${window.location.host}${file.url}`);
   };
 
+  // local storage to whether to show alert or not
+
   return (
     <div>
       {selectedFile && (
@@ -129,6 +132,8 @@ export default function Dashboard({ disableMediaPreview, exifEnabled, compress }
           otherUser={false}
         />
       )}
+
+      <Version4Notice />
 
       <Title>Welcome back, {user?.username}</Title>
       <MutedText size='md'>

@@ -67,7 +67,11 @@ export default function Login({
     const username = values.username.trim();
     const password = values.password.trim();
 
-    if (username === '') return form.setFieldError('username', "Username can't be nothing");
+    if (username === '') {
+      setLoading(false);
+      setDisabled(false);
+      return form.setFieldError('username', "Username can't be nothing");
+    }
 
     const res = await useFetch('/api/auth/login', 'POST', {
       username,
@@ -96,7 +100,10 @@ export default function Login({
         setLoading(false);
       }
     } else {
-      await router.push((router.query.url as string) || '/dashboard');
+      let redirectUrl = (router.query.url as string) || '/dashboard';
+      if (!redirectUrl.startsWith('/dashboard')) redirectUrl = '/dashboard';
+
+      await router.push(redirectUrl);
     }
   };
 

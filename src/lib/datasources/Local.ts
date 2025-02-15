@@ -11,11 +11,11 @@ export class Local extends Datasource {
   }
 
   public async save(file: string, data: Buffer): Promise<void> {
-    await writeFile(join(this.path, file), data);
+    await writeFile(join(this.path, file), Uint8Array.from(data));
   }
 
   public async delete(file: string): Promise<void> {
-    await rm(join(this.path, file));
+    await rm(join(this.path, file), { force: true });
   }
 
   public async clear(): Promise<void> {
@@ -37,9 +37,9 @@ export class Local extends Datasource {
     }
   }
 
-  public async size(file: string): Promise<number> {
+  public async size(file: string): Promise<number | null> {
     const full = join(this.path, file);
-    if (!existsSync(full)) return 0;
+    if (!existsSync(full)) return null;
     const stats = await stat(full);
 
     return stats.size;
@@ -55,5 +55,12 @@ export class Local extends Datasource {
     }
 
     return size;
+  }
+
+  public async range(file: string, start: number, end: number): Promise<ReadStream> {
+    const path = join(this.path, file);
+    const readStream = createReadStream(path, { start, end });
+
+    return readStream;
   }
 }

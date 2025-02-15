@@ -7,7 +7,6 @@ import { version } from '../../package.json';
 import fastify, { FastifyInstance, FastifyServerOptions } from 'fastify';
 import { createReadStream, existsSync, readFileSync } from 'fs';
 import { Worker } from 'worker_threads';
-import dbFileDecorator from './decorators/dbFile';
 import notFound from './decorators/notFound';
 import postFileDecorator from './decorators/postFile';
 import postUrlDecorator from './decorators/postUrl';
@@ -46,7 +45,7 @@ async function start() {
   logger.debug('Starting server');
 
   // plugins
-  server
+  await server
     .register(loggerPlugin)
     .register(configPlugin, config)
     .register(datasourcePlugin, datasource)
@@ -61,13 +60,12 @@ async function start() {
     .register(allPlugin);
 
   // decorators
-  server
+  await server
     .register(notFound)
     .register(postUrlDecorator)
     .register(postFileDecorator)
     .register(preFileDecorator)
-    .register(rawFileDecorator)
-    .register(dbFileDecorator);
+    .register(rawFileDecorator);
 
   server.addHook('onRequest', (req, reply, done) => {
     if (config.features.headless) {
@@ -98,6 +96,16 @@ async function start() {
     }
 
     done();
+  });
+
+  server.setErrorHandler((error, request, reply) => {
+    console.error(error);
+
+    reply.status(500).send({
+      statusCode: 500,
+      error: 'Internal Server Error',
+      message: error.message,
+    });
   });
 
   server.get('/favicon.ico', async (_, reply) => {
@@ -233,7 +241,9 @@ async function thumbs(this: FastifyInstance) {
       mimetype: {
         startsWith: 'video/',
       },
-      thumbnail: null,
+      thumbnail: {
+        is: null,
+      },
     },
     include: {
       thumbnail: true,
@@ -271,7 +281,9 @@ async function thumbs(this: FastifyInstance) {
 }
 
 function genFastifyOpts(): FastifyServerOptions {
-  const opts = {};
+  const opts: FastifyServerOptions = {
+    pluginTimeout: 25000,
+  };
 
   if (config.ssl?.cert && config.ssl?.key) {
     opts['https'] = {

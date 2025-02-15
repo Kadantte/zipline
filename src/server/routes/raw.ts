@@ -8,30 +8,29 @@ export default async function rawRoute(this: FastifyInstance, req: FastifyReques
 
   const file = await this.prisma.file.findFirst({
     where: {
-      OR: [{ name: id }, { invisible: { invis: decodeURI(encodeURI(id)) } }],
+      OR: [{ name: id }, { invisible: { invis: decodeURI(encodeURI(id)) } }, { thumbnail: { name: id } }],
+    },
+    include: {
+      thumbnail: true,
     },
   });
 
-  if (!file) return reply.rawFile(id);
-  else {
-    const failed = await reply.preFile(file);
-    if (failed) return reply.notFound();
+  if (!file) return reply.notFound();
 
-    if (file.password) {
-      if (!password)
-        return reply
-          .type('application/json')
-          .code(403)
-          .send({ error: 'password protected', url: `/view/${file.name}`, code: 403 });
-      const success = await checkPassword(password, file.password);
+  if (file.password) {
+    if (!password)
+      return reply
+        .type('application/json')
+        .code(403)
+        .send({ error: 'incorrect password', url: `/view/${file.name}`, code: 403 });
+    const success = await checkPassword(password, file.password);
 
-      if (!success)
-        return reply
-          .type('application/json')
-          .code(403)
-          .send({ error: 'incorrect password', url: `/view/${file.name}`, code: 403 });
-    }
-
-    return reply.rawFile(file.name);
+    if (!success)
+      return reply
+        .type('application/json')
+        .code(403)
+        .send({ error: 'incorrect password', url: `/view/${file.name}`, code: 403 });
   }
+
+  return (await reply.preFile(file)) ? reply.notFound() : reply.rawFile(file);
 }
